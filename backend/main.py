@@ -1,12 +1,13 @@
 import torch
 
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from transformers import AutoTokenizer, AutoModel
 
 
 app = FastAPI()
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
@@ -14,6 +15,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 MODEL_NAME = "jsun/bert-tiny"
 
@@ -31,12 +33,17 @@ class TextRequest(BaseModel):
 
 @app.get("/")
 def root():
-    return {"message": "ModelLens backend is running"}
+    return {
+        "message": "ModelLens backend is running"
+    }
 
 
 @app.post("/attention")
 def get_attention(request: TextRequest):
-    inputs = tokenizer(request.text, return_tensors="pt")
+    inputs = tokenizer(
+        request.text,
+        return_tensors="pt"
+    )
 
     with torch.no_grad():
         outputs = model(
@@ -48,9 +55,14 @@ def get_attention(request: TextRequest):
         inputs["input_ids"][0]
     )
 
-    first_layer_first_head = outputs.attentions[0][0][0]
+    all_attentions = [
+        layer[0].tolist()
+        for layer in outputs.attentions
+    ]
 
     return {
         "tokens": tokens,
-        "attention": first_layer_first_head.tolist()
+        "attentions": all_attentions,
+        "num_layers": len(outputs.attentions),
+        "num_heads": outputs.attentions[0].shape[1]
     }

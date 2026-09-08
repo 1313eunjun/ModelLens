@@ -93,6 +93,9 @@ function App() {
   const [result, setResult] = useState(null);
   const [selectedToken, setSelectedToken] = useState(null);
 
+  const [selectedLayer, setSelectedLayer] = useState(0);
+  const [selectedHead, setSelectedHead] = useState(0);
+
 
   const analyzeAttention = async () => {
     const response = await fetch(
@@ -114,7 +117,15 @@ function App() {
 
     setResult(data);
     setSelectedToken(null);
+    setSelectedLayer(0);
+    setSelectedHead(0);
   };
+
+
+  const currentAttention =
+    result
+      ? result.attentions[selectedLayer][selectedHead]
+      : null;
 
 
   return (
@@ -139,6 +150,56 @@ function App() {
 
       {result && (
         <>
+          <div className="controls">
+            <label>
+              Layer:
+              <select
+                value={selectedLayer}
+                onChange={(event) =>
+                  setSelectedLayer(
+                    Number(event.target.value)
+                  )
+                }
+              >
+                {Array.from(
+                  { length: result.num_layers },
+                  (_, index) => (
+                    <option
+                      key={index}
+                      value={index}
+                    >
+                      Layer {index + 1}
+                    </option>
+                  )
+                )}
+              </select>
+            </label>
+
+            <label>
+              Head:
+              <select
+                value={selectedHead}
+                onChange={(event) =>
+                  setSelectedHead(
+                    Number(event.target.value)
+                  )
+                }
+              >
+                {Array.from(
+                  { length: result.num_heads },
+                  (_, index) => (
+                    <option
+                      key={index}
+                      value={index}
+                    >
+                      Head {index + 1}
+                    </option>
+                  )
+                )}
+              </select>
+            </label>
+          </div>
+
           <h2>3D Attention View</h2>
 
           <p>
@@ -178,7 +239,7 @@ function App() {
 
               <AttentionLines
                 tokens={result.tokens}
-                attention={result.attention}
+                attention={currentAttention}
                 selectedToken={selectedToken}
               />
 
@@ -193,10 +254,15 @@ function App() {
                 {result.tokens[selectedToken]}"
               </h2>
 
+              <p>
+                Layer {selectedLayer + 1},
+                Head {selectedHead + 1}
+              </p>
+
               {result.tokens.map(
                 (token, index) => {
                   const value =
-                    result.attention[
+                    currentAttention[
                       selectedToken
                     ][index];
 

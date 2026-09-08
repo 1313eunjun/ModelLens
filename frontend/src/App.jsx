@@ -4,6 +4,7 @@ import "./App.css";
 function App() {
   const [text, setText] = useState("The cat sat on the mat.");
   const [result, setResult] = useState(null);
+  const [selectedToken, setSelectedToken] = useState(null);
 
   const analyzeAttention = async () => {
     const response = await fetch("http://127.0.0.1:8000/attention", {
@@ -17,7 +18,9 @@ function App() {
     });
 
     const data = await response.json();
+
     setResult(data);
+    setSelectedToken(null);
   };
 
   return (
@@ -40,7 +43,51 @@ function App() {
       {result && (
         <div>
           <h2>Tokens</h2>
-          <p>{result.tokens.join(" | ")}</p>
+
+          <div>
+            {result.tokens.map((token, index) => (
+              <button
+                key={index}
+                onClick={() => setSelectedToken(index)}
+              >
+                {token}
+              </button>
+            ))}
+          </div>
+
+          {selectedToken !== null && (
+            <div>
+              <h2>
+                Attention from "{result.tokens[selectedToken]}"
+              </h2>
+
+              {result.tokens.map((token, index) => {
+                const value =
+                  result.attention[selectedToken][index];
+
+                return (
+                  <div className="attention-row" key={index}>
+                    <span className="token-label">
+                      {token}
+                    </span>
+
+                    <div className="attention-bar-background">
+                      <div
+                        className="attention-bar"
+                        style={{
+                          width: `${value * 100}%`,
+                        }}
+                      />
+                    </div>
+
+                    <span className="attention-value">
+                      {value.toFixed(4)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>

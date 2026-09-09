@@ -20,8 +20,7 @@ function getTokenPosition(
       (endAngle - startAngle);
 
   const x = Math.cos(angle) * radius;
-  const y = Math.sin(angle) * radius - 2;
-
+  const y = Math.sin(angle) * radius - 1;
   const z = layerIndex * -5;
 
   return [x, y, z];
@@ -46,15 +45,16 @@ function TokenNode({
   const isActiveLayer =
     layerIndex === activeLayer;
 
-let color = "#64748b";
+  let color = "#64748b";
 
-if (isActiveLayer) {
-  color = "orange";
-}
+  if (isActiveLayer) {
+    color = "orange";
+  }
 
-if (selected) {
-  color = "cyan";
-}
+  if (selected) {
+    color = "cyan";
+  }
+
   return (
     <group position={position}>
       <mesh
@@ -69,14 +69,24 @@ if (selected) {
         <meshStandardMaterial
           color={color}
           transparent
-          opacity={selected ? 1 : isActiveLayer ? 1 : 0.35}
+          opacity={
+            selected
+              ? 1
+              : isActiveLayer
+              ? 1
+              : 0.35
+          }
         />
       </mesh>
 
       <Text
         position={[0, 0.75, 0]}
         fontSize={0.28}
-        color={isActiveLayer ? "white" : "#94a3b8"}
+        color={
+          isActiveLayer
+            ? "white"
+            : "#94a3b8"
+        }
         anchorX="center"
         anchorY="middle"
       >
@@ -100,7 +110,11 @@ function LayerLabel({
     <Text
       position={[0, 4.2, z]}
       fontSize={0.55}
-      color={isActive ? "cyan" : "#64748b"}
+      color={
+        isActive
+          ? "cyan"
+          : "#64748b"
+      }
       anchorX="center"
       anchorY="middle"
     >
@@ -115,6 +129,7 @@ function AttentionLines({
   attention,
   selectedToken,
   layerIndex,
+  threshold,
 }) {
   if (selectedToken === null) {
     return null;
@@ -126,50 +141,59 @@ function AttentionLines({
     layerIndex
   );
 
-  const values = attention[selectedToken];
+  const values =
+    attention[selectedToken];
 
-  const visibleValues = values.filter(
-    (value, index) =>
-      index !== selectedToken &&
-      value >= 0.02
-  );
+  const visibleValues =
+    values.filter(
+      (value, index) =>
+        index !== selectedToken &&
+        value >= threshold
+    );
 
   const maxValue = Math.max(
     ...visibleValues,
-    0.02
+    threshold
   );
 
-  return tokens.map((token, index) => {
-    if (index === selectedToken) {
-      return null;
+  return tokens.map(
+    (token, index) => {
+      if (index === selectedToken) {
+        return null;
+      }
+
+      const value = values[index];
+
+      if (value < threshold) {
+        return null;
+      }
+
+      const normalized =
+        value / maxValue;
+
+      const end = getTokenPosition(
+        index,
+        tokens.length,
+        layerIndex
+      );
+
+      return (
+        <Line
+          key={index}
+          points={[start, end]}
+          color="cyan"
+          lineWidth={
+            1 + normalized * 4
+          }
+          transparent
+          opacity={
+            0.3 +
+            normalized * 0.7
+          }
+        />
+      );
     }
-
-    const value = values[index];
-
-    if (value < 0.02) {
-      return null;
-    }
-
-    const normalized =
-      value / maxValue;
-
-    const end = getTokenPosition(
-      index,
-      tokens.length,
-      layerIndex
-    );
-
-    return (
-      <Line
-        key={index}
-        points={[start, end]}
-        color="cyan"
-        lineWidth={1 + normalized * 4}
-        transparent
-        opacity={0.3 + normalized * 0.7}
-      />
-    );
-  });
+  );
 }
 
 
@@ -185,42 +209,58 @@ function LayerConnections({
     layer < numLayers - 1;
     layer++
   ) {
-    tokens.forEach((token, index) => {
-      const start = getTokenPosition(
-        index,
-        tokens.length,
-        layer
-      );
+    tokens.forEach(
+      (token, index) => {
+        const start =
+          getTokenPosition(
+            index,
+            tokens.length,
+            layer
+          );
 
-      const end = getTokenPosition(
-        index,
-        tokens.length,
-        layer + 1
-      );
+        const end =
+          getTokenPosition(
+            index,
+            tokens.length,
+            layer + 1
+          );
 
-      const isSelected =
-        index === selectedToken;
+        const isSelected =
+          index === selectedToken;
 
-      connections.push(
-        <Line
-          key={`${layer}-${index}`}
-          points={[start, end]}
-          color={isSelected ? "cyan" : "#334155"}
-          lineWidth={isSelected ? 3 : 0.7}
-          transparent
-          opacity={isSelected ? 0.9 : 0.2}
-        />
-      );
-    });
+        connections.push(
+          <Line
+            key={`${layer}-${index}`}
+            points={[start, end]}
+            color={
+              isSelected
+                ? "cyan"
+                : "#334155"
+            }
+            lineWidth={
+              isSelected ? 3 : 0.7
+            }
+            transparent
+            opacity={
+              isSelected
+                ? 0.9
+                : 0.2
+            }
+          />
+        );
+      }
+    );
   }
 
   return connections;
 }
 
+
 function App() {
-  const [text, setText] = useState(
-    "The cat sat on the mat."
-  );
+  const [text, setText] =
+    useState(
+      "The cat sat on the mat."
+    );
 
   const [result, setResult] =
     useState(null);
@@ -240,31 +280,38 @@ function App() {
     setSelectedHead,
   ] = useState(0);
 
+  const [
+    threshold,
+    setThreshold,
+  ] = useState(0.02);
 
-  const analyzeAttention = async () => {
-    const response = await fetch(
-      "http://127.0.0.1:8000/attention",
-      {
-        method: "POST",
 
-        headers: {
-          "Content-Type":
-            "application/json",
-        },
+  const analyzeAttention =
+    async () => {
+      const response = await fetch(
+        "http://127.0.0.1:8000/attention",
+        {
+          method: "POST",
 
-        body: JSON.stringify({
-          text: text,
-        }),
-      }
-    );
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
 
-    const data = await response.json();
+          body: JSON.stringify({
+            text: text,
+          }),
+        }
+      );
 
-    setResult(data);
-    setSelectedToken(null);
-    setSelectedLayer(0);
-    setSelectedHead(0);
-  };
+      const data =
+        await response.json();
+
+      setResult(data);
+      setSelectedToken(null);
+      setSelectedLayer(0);
+      setSelectedHead(0);
+    };
 
 
   const currentAttention =
@@ -287,12 +334,16 @@ function App() {
       <textarea
         value={text}
         onChange={(event) =>
-          setText(event.target.value)
+          setText(
+            event.target.value
+          )
         }
       />
 
       <button
-        onClick={analyzeAttention}
+        onClick={
+          analyzeAttention
+        }
       >
         Analyze Attention
       </button>
@@ -303,15 +354,22 @@ function App() {
             <label>
               Layer:
               <select
-                value={selectedLayer}
-                onChange={(event) => {
+                value={
+                  selectedLayer
+                }
+                onChange={(
+                  event
+                ) => {
                   setSelectedLayer(
                     Number(
-                      event.target.value
+                      event.target
+                        .value
                     )
                   );
 
-                  setSelectedToken(null);
+                  setSelectedToken(
+                    null
+                  );
                 }}
               >
                 {Array.from(
@@ -324,7 +382,8 @@ function App() {
                       key={index}
                       value={index}
                     >
-                      Layer {index + 1}
+                      Layer{" "}
+                      {index + 1}
                     </option>
                   )
                 )}
@@ -334,15 +393,22 @@ function App() {
             <label>
               Head:
               <select
-                value={selectedHead}
-                onChange={(event) => {
+                value={
+                  selectedHead
+                }
+                onChange={(
+                  event
+                ) => {
                   setSelectedHead(
                     Number(
-                      event.target.value
+                      event.target
+                        .value
                     )
                   );
 
-                  setSelectedToken(null);
+                  setSelectedToken(
+                    null
+                  );
                 }}
               >
                 {Array.from(
@@ -355,12 +421,38 @@ function App() {
                       key={index}
                       value={index}
                     >
-                      Head {index + 1}
+                      Head{" "}
+                      {index + 1}
                     </option>
                   )
                 )}
               </select>
             </label>
+          </div>
+
+          <div className="threshold-control">
+            <label>
+              Attention Threshold:{" "}
+              <strong>
+                {threshold.toFixed(2)}
+              </strong>
+            </label>
+
+            <input
+              type="range"
+              min="0"
+              max="0.2"
+              step="0.01"
+              value={threshold}
+              onChange={(event) =>
+                setThreshold(
+                  Number(
+                    event.target
+                      .value
+                  )
+                )
+              }
+            />
           </div>
 
           <h2>
@@ -375,7 +467,11 @@ function App() {
           <div className="canvas-container">
             <Canvas
               camera={{
-                position: [9, 4, 18],
+                position: [
+                  9,
+                  4,
+                  18,
+                ],
                 fov: 50,
               }}
             >
@@ -384,15 +480,23 @@ function App() {
               />
 
               <directionalLight
-                position={[5, 6, 8]}
+                position={[
+                  5,
+                  6,
+                  8,
+                ]}
               />
 
               <LayerConnections
-                tokens={result.tokens}
+                tokens={
+                  result.tokens
+                }
                 numLayers={
                   result.num_layers
                 }
-		selectedToken={selectedToken}
+                selectedToken={
+                  selectedToken
+                }
               />
 
               {Array.from(
@@ -403,8 +507,12 @@ function App() {
                 (_, layerIndex) => (
                   <LayerLabel
                     key={`label-${layerIndex}`}
-                    layerIndex={layerIndex}
-                    activeLayer={selectedLayer}
+                    layerIndex={
+                      layerIndex
+                    }
+                    activeLayer={
+                      selectedLayer
+                    }
                   />
                 )
               )}
@@ -416,13 +524,22 @@ function App() {
                 },
                 (_, layerIndex) =>
                   result.tokens.map(
-                    (token, index) => (
+                    (
+                      token,
+                      index
+                    ) => (
                       <TokenNode
                         key={`${layerIndex}-${index}`}
-                        token={token}
-                        index={index}
+                        token={
+                          token
+                        }
+                        index={
+                          index
+                        }
                         tokenCount={
-                          result.tokens.length
+                          result
+                            .tokens
+                            .length
                         }
                         layerIndex={
                           layerIndex
@@ -432,7 +549,7 @@ function App() {
                         }
                         selected={
                           selectedToken ===
-                            index
+                          index
                         }
                         onClick={() =>
                           setSelectedToken(
@@ -457,13 +574,17 @@ function App() {
                 layerIndex={
                   selectedLayer
                 }
+                threshold={
+                  threshold
+                }
               />
 
               <OrbitControls />
             </Canvas>
           </div>
 
-          {selectedToken !== null && (
+          {selectedToken !==
+            null && (
             <div>
               <h2>
                 Attention from "
@@ -483,7 +604,10 @@ function App() {
               </p>
 
               {result.tokens.map(
-                (token, index) => {
+                (
+                  token,
+                  index
+                ) => {
                   const value =
                     currentAttention[
                       selectedToken
@@ -503,7 +627,8 @@ function App() {
                           className="attention-bar"
                           style={{
                             width: `${
-                              value * 100
+                              value *
+                              100
                             }%`,
                           }}
                         />

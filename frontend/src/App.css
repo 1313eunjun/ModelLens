@@ -188,3 +188,19 @@ select {
     font-size: 42px;
   }
 }
+.threshold-control {
+  max-width: 520px;
+  margin: 22px auto 0;
+  text-align: center;
+}
+
+.threshold-control label {
+  display: block;
+  margin-bottom: 10px;
+  color: #cbd5e1;
+}
+
+.threshold-control input {
+  width: 100%;
+  cursor: pointer;
+}

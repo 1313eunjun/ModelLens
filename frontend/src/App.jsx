@@ -375,8 +375,8 @@ function App() {
           <div className="canvas-container">
             <Canvas
               camera={{
-                position: [10, 6, 16],
-                fov: 45,
+                position: [9, 4, 18],
+                fov: 50,
               }}
             >
               <ambientLight

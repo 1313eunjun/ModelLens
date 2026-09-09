@@ -5,10 +5,20 @@ import "./App.css";
 
 
 function getTokenPosition(index, tokenCount) {
-  const center = (tokenCount - 1) / 2;
-  const x = (index - center) * 1.5;
+  const radius = 5;
 
-  return [x, 0, 0];
+  const startAngle = Math.PI;
+  const endAngle = 0;
+
+  const angle =
+    startAngle +
+    (index / (tokenCount - 1)) *
+      (endAngle - startAngle);
+
+  const x = Math.cos(angle) * radius;
+  const y = Math.sin(angle) * radius - 2;
+
+  return [x, y, 0];
 }
 
 
@@ -59,12 +69,30 @@ function AttentionLines({
     tokens.length
   );
 
+  const values = attention[selectedToken];
+
+  const visibleValues = values.filter(
+    (value, index) =>
+      index !== selectedToken && value >= 0.02
+  );
+
+  const maxValue = Math.max(
+    ...visibleValues,
+    0.02
+  );
+
   return tokens.map((token, index) => {
     if (index === selectedToken) {
       return null;
     }
 
-    const value = attention[selectedToken][index];
+    const value = values[index];
+
+    if (value < 0.02) {
+      return null;
+    }
+
+    const normalized = value / maxValue;
 
     const end = getTokenPosition(
       index,
@@ -76,9 +104,9 @@ function AttentionLines({
         key={index}
         points={[start, end]}
         color="cyan"
-        lineWidth={Math.max(value * 20, 0.5)}
+        lineWidth={1 + normalized * 8}
         transparent
-        opacity={Math.max(value, 0.15)}
+        opacity={0.3 + normalized * 0.7}
       />
     );
   });
@@ -91,10 +119,15 @@ function App() {
   );
 
   const [result, setResult] = useState(null);
-  const [selectedToken, setSelectedToken] = useState(null);
 
-  const [selectedLayer, setSelectedLayer] = useState(0);
-  const [selectedHead, setSelectedHead] = useState(0);
+  const [selectedToken, setSelectedToken] =
+    useState(null);
+
+  const [selectedLayer, setSelectedLayer] =
+    useState(0);
+
+  const [selectedHead, setSelectedHead] =
+    useState(0);
 
 
   const analyzeAttention = async () => {
@@ -209,7 +242,7 @@ function App() {
           <div className="canvas-container">
             <Canvas
               camera={{
-                position: [0, 2, 11],
+                position: [0, 1, 12],
               }}
             >
               <ambientLight intensity={1.5} />

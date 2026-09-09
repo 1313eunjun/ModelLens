@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Text, Line } from "@react-three/drei";
+import { OrbitControls, Text, Line, Html } from "@react-three/drei";
 import "./App.css";
 
 
@@ -34,8 +34,12 @@ function TokenNode({
   layerIndex,
   activeLayer,
   selected,
+  selectedToken,
+  attention,
   onClick,
 }) {
+  const [hovered, setHovered] = useState(false);
+
   const position = getTokenPosition(
     index,
     tokenCount,
@@ -55,6 +59,17 @@ function TokenNode({
     color = "cyan";
   }
 
+  let attentionValue = null;
+
+  if (
+    selectedToken !== null &&
+    attention &&
+    isActiveLayer
+  ) {
+    attentionValue =
+      attention[selectedToken][index];
+  }
+
   return (
     <group position={position}>
       <mesh
@@ -63,6 +78,15 @@ function TokenNode({
             ? onClick
             : undefined
         }
+        onPointerOver={(event) => {
+          event.stopPropagation();
+          setHovered(true);
+          document.body.style.cursor = "pointer";
+        }}
+        onPointerOut={() => {
+          setHovered(false);
+          document.body.style.cursor = "default";
+        }}
       >
         <sphereGeometry args={[0.42, 32, 32]} />
 
@@ -92,6 +116,33 @@ function TokenNode({
       >
         {token}
       </Text>
+
+      {hovered && (
+        <Html
+          position={[0, 1.15, 0]}
+          center
+          distanceFactor={8}
+        >
+          <div className="token-tooltip">
+            <strong>{token}</strong>
+
+            <span>
+              Layer {layerIndex + 1}
+            </span>
+
+            <span>
+              Token {index}
+            </span>
+
+            {attentionValue !== null && (
+              <span>
+                Attention:{" "}
+                {attentionValue.toFixed(4)}
+              </span>
+            )}
+          </div>
+        </Html>
+      )}
     </group>
   );
 }
@@ -257,10 +308,9 @@ function LayerConnections({
 
 
 function App() {
-  const [text, setText] =
-    useState(
-      "The cat sat on the mat."
-    );
+  const [text, setText] = useState(
+    "The cat sat on the mat."
+  );
 
   const [result, setResult] =
     useState(null);
@@ -353,6 +403,7 @@ function App() {
           <div className="controls">
             <label>
               Layer:
+
               <select
                 value={
                   selectedLayer
@@ -362,8 +413,7 @@ function App() {
                 ) => {
                   setSelectedLayer(
                     Number(
-                      event.target
-                        .value
+                      event.target.value
                     )
                   );
 
@@ -382,8 +432,7 @@ function App() {
                       key={index}
                       value={index}
                     >
-                      Layer{" "}
-                      {index + 1}
+                      Layer {index + 1}
                     </option>
                   )
                 )}
@@ -392,6 +441,7 @@ function App() {
 
             <label>
               Head:
+
               <select
                 value={
                   selectedHead
@@ -401,8 +451,7 @@ function App() {
                 ) => {
                   setSelectedHead(
                     Number(
-                      event.target
-                        .value
+                      event.target.value
                     )
                   );
 
@@ -421,8 +470,7 @@ function App() {
                       key={index}
                       value={index}
                     >
-                      Head{" "}
-                      {index + 1}
+                      Head {index + 1}
                     </option>
                   )
                 )}
@@ -447,8 +495,7 @@ function App() {
               onChange={(event) =>
                 setThreshold(
                   Number(
-                    event.target
-                      .value
+                    event.target.value
                   )
                 )
               }
@@ -467,11 +514,7 @@ function App() {
           <div className="canvas-container">
             <Canvas
               camera={{
-                position: [
-                  9,
-                  4,
-                  18,
-                ],
+                position: [9, 4, 18],
                 fov: 50,
               }}
             >
@@ -480,11 +523,7 @@ function App() {
               />
 
               <directionalLight
-                position={[
-                  5,
-                  6,
-                  8,
-                ]}
+                position={[5, 6, 8]}
               />
 
               <LayerConnections
@@ -537,9 +576,7 @@ function App() {
                           index
                         }
                         tokenCount={
-                          result
-                            .tokens
-                            .length
+                          result.tokens.length
                         }
                         layerIndex={
                           layerIndex
@@ -550,6 +587,12 @@ function App() {
                         selected={
                           selectedToken ===
                           index
+                        }
+                        selectedToken={
+                          selectedToken
+                        }
+                        attention={
+                          currentAttention
                         }
                         onClick={() =>
                           setSelectedToken(
@@ -583,8 +626,7 @@ function App() {
             </Canvas>
           </div>
 
-          {selectedToken !==
-            null && (
+          {selectedToken !== null && (
             <div>
               <h2>
                 Attention from "
@@ -627,17 +669,14 @@ function App() {
                           className="attention-bar"
                           style={{
                             width: `${
-                              value *
-                              100
+                              value * 100
                             }%`,
                           }}
                         />
                       </div>
 
                       <span className="attention-value">
-                        {value.toFixed(
-                          4
-                        )}
+                        {value.toFixed(4)}
                       </span>
                     </div>
                   );

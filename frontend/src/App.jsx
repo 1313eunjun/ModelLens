@@ -335,32 +335,55 @@ function App() {
     setThreshold,
   ] = useState(0.02);
 
+  const [loading, setLoading] =
+    useState(false);
+
+  const [error, setError] =
+    useState("");
+
 
   const analyzeAttention =
     async () => {
-      const response = await fetch(
-        "http://127.0.0.1:8000/attention",
-        {
-          method: "POST",
+      setLoading(true);
+      setError("");
 
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
+      try {
+        const response = await fetch(
+          "http://127.0.0.1:8000/attention",
+          {
+            method: "POST",
 
-          body: JSON.stringify({
-            text: text,
-          }),
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              text: text,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            "Backend returned an error."
+          );
         }
-      );
 
-      const data =
-        await response.json();
+        const data =
+          await response.json();
 
-      setResult(data);
-      setSelectedToken(null);
-      setSelectedLayer(0);
-      setSelectedHead(0);
+        setResult(data);
+        setSelectedToken(null);
+        setSelectedLayer(0);
+        setSelectedHead(0);
+      } catch (err) {
+        setError(
+          "Could not analyze attention. Make sure the backend server is running."
+        );
+      } finally {
+        setLoading(false);
+      }
     };
 
 
@@ -391,12 +414,19 @@ function App() {
       />
 
       <button
-        onClick={
-          analyzeAttention
-        }
+        onClick={analyzeAttention}
+        disabled={loading}
       >
-        Analyze Attention
+        {loading
+          ? "Analyzing..."
+          : "Analyze Attention"}
       </button>
+
+      {error && (
+        <p className="error-message">
+          {error}
+        </p>
+      )}
 
       {result && (
         <>

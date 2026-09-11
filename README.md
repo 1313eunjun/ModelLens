@@ -1,4 +1,4 @@
-k# ModelLens
+# ModelLens
 
 ModelLens is an interactive 3D visualization tool for exploring how transformer models distribute attention across tokens and layers.
 
